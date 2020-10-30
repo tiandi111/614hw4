@@ -47,7 +47,9 @@ class SRRIPReplPolicy : public ReplPolicy {
             }
             uint32_t delta = rpvMax-maxRRPV;
             for(uint32_t i = 0; i < numLines; i++) {
-                array[i] += delta;
+                if(array[i] <= rpvMax) {
+                    array[i] += delta;
+                }
             }
             return maxId;
         }
