@@ -7,16 +7,16 @@
 class SRRIPReplPolicy : public ReplPolicy {
     protected:
         // add class member variables here
-        int32_t *array;
+        uint32_t *array;
         uint32_t numLines;
-        uint32_t rpvMax;
+        uint64_t rpvMax;
 
     public:
         // add member methods here, refer to repl_policies.h
         SRRIPReplPolicy(uint32_t _numLines, uint32_t _rpvMax) : numLines(_numLines), rpvMax(_rpvMax) {
-            array = gm_calloc<int32_t>(numLines);
-            for(int i = 0; i < numLines; i++) {
-                array[i] = -1;
+            array = gm_calloc<uint32_t>(numLines);
+            for(uint32_t i = 0; i < numLines; i++) {
+                array[i] = rpvMax+1;
             }
         }
 
@@ -25,21 +25,21 @@ class SRRIPReplPolicy : public ReplPolicy {
         }
 
         void update(uint32_t id, const MemReq* req) {
-            array[id] = array[id] == -1? rpvMax-1 : 0;
+            array[id] = array[id] == rpvMax+1? rpvMax-1 : 0;
         }
 
         virtual void replaced(uint32_t id) {
-            array[id] = -1;
+            array[id] = rpvMax+1;
         }
 
         template <typename C> inline uint32_t rank(const MemReq* req, C cands) {
             while(true) {
                 for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
                     if(array[*ci] == rpvMax ) {
-                        return *ci
+                        return *ci;
                     }
                 }
-                for(int i = 0; i < numLines; i++) {
+                for(uint32_t i = 0; i < numLines; i++) {
                     array[i] ++;
                 }
             }
