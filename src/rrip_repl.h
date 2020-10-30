@@ -22,7 +22,6 @@ class SRRIPReplPolicy : public ReplPolicy {
 
         ~SRRIPReplPolicy() {
             gm_free(array);
-            gm_free(valid);
         }
 
         void update(uint32_t id, const MemReq* req) {
@@ -38,12 +37,15 @@ class SRRIPReplPolicy : public ReplPolicy {
             uint32_t maxId = -1;
             for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
                 uint32_t currRRPV = array[*ci];
+                if(currRRPV == rpvMax+1) {
+                    return *ci;
+                }
                 if(currRRPV > maxRRPV) {
                     maxRRPV = currRRPV;
                     maxId = *ci;
                 }
             }
-            uint32_t delta = maxRRPV > rpvMax ? 0 : rpvMax-maxRRPV;
+            uint32_t delta = rpvMax-maxRRPV;
             for(uint32_t i = 0; i < numLines; i++) {
                 array[i] += delta;
             }
