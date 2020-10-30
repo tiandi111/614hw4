@@ -215,7 +215,7 @@ class NRUReplPolicy : public LegacyReplPolicy {
         }
 
         void update(uint32_t id, const MemReq* req) {
-            //if (array[id]) info("update PRE %d %d %d", id, array[id], youngLines);
+//            if (array[id]) info("update PRE %d %d %d", id, array[id], youngLines);
             youngLines += 1 - (array[id] >> 1); //+0 if young, +1 if old
             array[id] |= 0x2;
 

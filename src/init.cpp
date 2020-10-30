@@ -167,7 +167,7 @@ BaseCache* BuildCacheBank(Config& config, const string& prefix, g_string& name, 
         rp = new RandReplPolicy(candidates);
     } else if (replType == "SRRIP") {
         // max value of RRPV, you need to pass it to your SRRIP constructor
-        uint32_t rpvMax = config.get<bool>(prefix + "repl.rpvMax", 3);
+        uint32_t rpvMax = config.get<uint32_t>(prefix + "repl.rpvMax", 3);
         assert(isPow2(rpvMax + 1));
         // add your SRRIP construction code here
         rp = new SRRIPReplPolicy(numLines, rpvMax);
