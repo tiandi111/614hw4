@@ -71,8 +71,8 @@ class TimingCore : public Core {
         inline void bblAndRecord(Address bblAddr, BblInfo* bblInstrs);
         inline void record(uint64_t startCycle);
 
-        static void LoadAndRecordFunc(THREADID tid, ADDRINT addr);
-        static void StoreAndRecordFunc(THREADID tid, ADDRINT addr);
+        static void LoadAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc);
+        static void StoreAndRecordFunc(THREADID tid, ADDRINT addr,ADDRINT pc);
         static void BblAndRecordFunc(THREADID tid, ADDRINT bblAddr, BblInfo* bblInfo);
         static void PredLoadAndRecordFunc(THREADID tid, ADDRINT addr, BOOL pred);
         static void PredStoreAndRecordFunc(THREADID tid, ADDRINT addr, BOOL pred);

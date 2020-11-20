@@ -53,8 +53,8 @@ class NullCore : public Core {
     protected:
         inline void bbl(BblInfo* bblInstrs);
 
-        static void LoadFunc(THREADID tid, ADDRINT addr);
-        static void StoreFunc(THREADID tid, ADDRINT addr);
+        static void LoadFunc(THREADID tid, ADDRINT addr, ADDRINT pc);
+        static void StoreFunc(THREADID tid, ADDRINT addr, ADDRINT pc);
         static void BblFunc(THREADID tid, ADDRINT bblAddr, BblInfo* bblInfo);
         static void PredLoadFunc(THREADID tid, ADDRINT addr, BOOL pred);
         static void PredStoreFunc(THREADID tid, ADDRINT addr, BOOL pred);

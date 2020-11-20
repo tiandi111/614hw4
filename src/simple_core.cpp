@@ -92,11 +92,11 @@ InstrFuncPtrs SimpleCore::GetFuncPtrs() {
     return {LoadFunc, StoreFunc, BblFunc, BranchFunc, PredLoadFunc, PredStoreFunc, FPTR_ANALYSIS, {0}};
 }
 
-void SimpleCore::LoadFunc(THREADID tid, ADDRINT addr) {
+void SimpleCore::LoadFunc(THREADID tid, ADDRINT addr, ADDRINT pc) {
     static_cast<SimpleCore*>(cores[tid])->load(addr);
 }
 
-void SimpleCore::StoreFunc(THREADID tid, ADDRINT addr) {
+void SimpleCore::StoreFunc(THREADID tid, ADDRINT addr, ADDRINT pc) {
     static_cast<SimpleCore*>(cores[tid])->store(addr);
 }
 

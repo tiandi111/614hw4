@@ -63,8 +63,8 @@ class SimpleCore : public Core {
         inline void store(Address addr);
         inline void bbl(Address bblAddr, BblInfo* bblInstrs);
 
-        static void LoadFunc(THREADID tid, ADDRINT addr);
-        static void StoreFunc(THREADID tid, ADDRINT addr);
+        static void LoadFunc(THREADID tid, ADDRINT addr, ADDRINT pc);
+        static void StoreFunc(THREADID tid, ADDRINT addr, ADDRINT pc);
         static void BblFunc(THREADID tid, ADDRINT bblAddr, BblInfo* bblInfo);
         static void PredLoadFunc(THREADID tid, ADDRINT addr, BOOL pred);
         static void PredStoreFunc(THREADID tid, ADDRINT addr, BOOL pred);

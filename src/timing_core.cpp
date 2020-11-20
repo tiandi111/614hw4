@@ -106,11 +106,11 @@ InstrFuncPtrs TimingCore::GetFuncPtrs() {
     return {LoadAndRecordFunc, StoreAndRecordFunc, BblAndRecordFunc, BranchFunc, PredLoadAndRecordFunc, PredStoreAndRecordFunc, FPTR_ANALYSIS, {0}};
 }
 
-void TimingCore::LoadAndRecordFunc(THREADID tid, ADDRINT addr) {
+void TimingCore::LoadAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc) {
     static_cast<TimingCore*>(cores[tid])->loadAndRecord(addr);
 }
 
-void TimingCore::StoreAndRecordFunc(THREADID tid, ADDRINT addr) {
+void TimingCore::StoreAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc) {
     static_cast<TimingCore*>(cores[tid])->storeAndRecord(addr);
 }
 

@@ -41,8 +41,8 @@ struct BblInfo {
  * As an artifact of having a shared code cache, we need these to be the same for different core types.
  */
 struct InstrFuncPtrs {  // NOLINT(whitespace)
-    void (*loadPtr)(THREADID, ADDRINT);
-    void (*storePtr)(THREADID, ADDRINT);
+    void (*loadPtr)(THREADID, ADDRINT, ADDRINT);
+    void (*storePtr)(THREADID, ADDRINT, ADDRINT);
     void (*bblPtr)(THREADID, ADDRINT, BblInfo*);
     void (*branchPtr)(THREADID, ADDRINT, BOOL, ADDRINT, ADDRINT);
     // Same as load/store functions, but last arg indicated whether op is executing
