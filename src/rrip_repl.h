@@ -45,7 +45,6 @@ class SRRIPReplPolicy : public ReplPolicy {
                     }
                 }
             }
-            return maxId;
         }
 
         DECL_RANK_BINDINGS;
