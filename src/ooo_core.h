@@ -383,6 +383,8 @@ class OOOCore : public Core {
         //Record load and store addresses
         Address loadAddrs[256];
         Address storeAddrs[256];
+        Address loadPc[256];
+        Address storePc[256];
         uint32_t loads;
         uint32_t stores;
 

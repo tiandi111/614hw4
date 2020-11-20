@@ -165,11 +165,11 @@ VOID FFThread(VOID* arg);
 
 InstrFuncPtrs fPtrs[MAX_THREADS] ATTR_LINE_ALIGNED; //minimize false sharing
 
-VOID PIN_FAST_ANALYSIS_CALL IndirectLoadSingle(THREADID tid, ADDRINT addr) {
+VOID PIN_FAST_ANALYSIS_CALL IndirectLoadSingle(THREADID tid, ADDRINT addr, ADDRINT pc) {
     fPtrs[tid].loadPtr(tid, addr);
 }
 
-VOID PIN_FAST_ANALYSIS_CALL IndirectStoreSingle(THREADID tid, ADDRINT addr) {
+VOID PIN_FAST_ANALYSIS_CALL IndirectStoreSingle(THREADID tid, ADDRINT addr, ADDRINT pc) {
     fPtrs[tid].storePtr(tid, addr);
 }
 
@@ -541,7 +541,7 @@ VOID Instruction(INS ins) {
 
         if (INS_IsMemoryRead(ins)) {
             if (!INS_IsPredicated(ins)) {
-                INS_InsertCall(ins, IPOINT_BEFORE, LoadFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYREAD_EA, IARG_END);
+                INS_InsertCall(ins, IPOINT_BEFORE, LoadFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYREAD_EA, IARG_INST_PTR, IARG_END);
             } else {
                 INS_InsertCall(ins, IPOINT_BEFORE, PredLoadFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYREAD_EA, IARG_EXECUTING, IARG_END);
             }
@@ -549,7 +549,7 @@ VOID Instruction(INS ins) {
 
         if (INS_HasMemoryRead2(ins)) {
             if (!INS_IsPredicated(ins)) {
-                INS_InsertCall(ins, IPOINT_BEFORE, LoadFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYREAD2_EA, IARG_END);
+                INS_InsertCall(ins, IPOINT_BEFORE, LoadFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYREAD2_EA, IARG_INST_PTR, IARG_END);
             } else {
                 INS_InsertCall(ins, IPOINT_BEFORE, PredLoadFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYREAD2_EA, IARG_EXECUTING, IARG_END);
             }
@@ -557,7 +557,7 @@ VOID Instruction(INS ins) {
 
         if (INS_IsMemoryWrite(ins)) {
             if (!INS_IsPredicated(ins)) {
-                INS_InsertCall(ins, IPOINT_BEFORE,  StoreFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYWRITE_EA, IARG_END);
+                INS_InsertCall(ins, IPOINT_BEFORE,  StoreFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYWRITE_EA, IARG_INST_PTR, IARG_END);
             } else {
                 INS_InsertCall(ins, IPOINT_BEFORE,  PredStoreFuncPtr, IARG_FAST_ANALYSIS_CALL, IARG_THREAD_ID, IARG_MEMORYWRITE_EA, IARG_EXECUTING, IARG_END);
             }
