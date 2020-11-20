@@ -209,12 +209,12 @@ void Join(uint32_t tid) {
 
 VOID JoinAndLoadSingle(THREADID tid, ADDRINT addr, ADDRINT pc) {
     Join(tid);
-    fPtrs[tid].loadPtr(tid, addr);
+    fPtrs[tid].loadPtr(tid, addr, pc);
 }
 
 VOID JoinAndStoreSingle(THREADID tid, ADDRINT addr, ADDRINT pc) {
     Join(tid);
-    fPtrs[tid].storePtr(tid, addr);
+    fPtrs[tid].storePtr(tid, addr, pc);
 }
 
 VOID JoinAndBasicBlock(THREADID tid, ADDRINT bblAddr, BblInfo* bblInfo) {
