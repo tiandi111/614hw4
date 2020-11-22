@@ -59,8 +59,8 @@ class SimpleCore : public Core {
 
     protected:
         //Simulation functions
-        inline void load(Address addr);
-        inline void store(Address addr);
+        inline void load(Address addr, Address pc);
+        inline void store(Address addr, Address pc);
         inline void bbl(Address bblAddr, BblInfo* bblInstrs);
 
         static void LoadFunc(THREADID tid, ADDRINT addr, ADDRINT pc);
