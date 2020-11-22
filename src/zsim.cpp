@@ -229,12 +229,12 @@ VOID JoinAndRecordBranch(THREADID tid, ADDRINT branchPc, BOOL taken, ADDRINT tak
 
 VOID JoinAndPredLoadSingle(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred) {
     Join(tid);
-    fPtrs[tid].predLoadPtr(tid, addr, pred);
+    fPtrs[tid].predLoadPtr(tid, addr, pc, pred);
 }
 
 VOID JoinAndPredStoreSingle(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred) {
     Join(tid);
-    fPtrs[tid].predStorePtr(tid, addr, pred);
+    fPtrs[tid].predStorePtr(tid, addr, pc, pred);
 }
 
 // NOP variants: Do nothing
