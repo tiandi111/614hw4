@@ -270,7 +270,7 @@ inline void OOOCore::bbl(Address bblAddr, BblInfo* bblInfo) {
                     // Wait for all previous store addresses to be resolved
                     dispatchCycle = MAX(lastStoreAddrCommitCycle+1, dispatchCycle);
 
-                    Address addr = loadAddrs[loadIdx++];
+                    Address addr = loadAddrs[loadIdx];
                     Address pc = loadPcs[loadIdx++];
                     uint64_t reqSatisfiedCycle = dispatchCycle;
                     if (addr != ((Address)-1L)) {
@@ -310,8 +310,8 @@ inline void OOOCore::bbl(Address bblAddr, BblInfo* bblInfo) {
                     // Wait for all previous store addresses to be resolved (not just ours :))
                     dispatchCycle = MAX(lastStoreAddrCommitCycle+1, dispatchCycle);
 
-                    Address addr = storeAddrs[storeIdx++];
-                    Address pc = storePcs[loadIdx++];
+                    Address addr = storeAddrs[storeIdx];
+                    Address pc = storePcs[storeIdx++];
                     uint64_t reqSatisfiedCycle = l1d->store(addr, pc, dispatchCycle) + L1D_LAT;
                     cRec.record(curCycle, dispatchCycle, reqSatisfiedCycle);
 
