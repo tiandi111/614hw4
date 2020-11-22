@@ -64,8 +64,8 @@ InstrFuncPtrs NullCore::GetFuncPtrs() {
 
 void NullCore::LoadFunc(THREADID tid, ADDRINT addr, ADDRINT pc) {}
 void NullCore::StoreFunc(THREADID tid, ADDRINT addr, ADDRINT pc) {}
-void NullCore::PredLoadFunc(THREADID tid, ADDRINT addr, BOOL pred) {}
-void NullCore::PredStoreFunc(THREADID tid, ADDRINT addr, BOOL pred) {}
+void NullCore::PredLoadFunc(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred) {}
+void NullCore::PredStoreFunc(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred) {}
 
 void NullCore::BblFunc(THREADID tid, ADDRINT bblAddr, BblInfo* bblInfo) {
     NullCore* core = static_cast<NullCore*>(cores[tid]);

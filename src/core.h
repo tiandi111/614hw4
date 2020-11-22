@@ -46,8 +46,8 @@ struct InstrFuncPtrs {  // NOLINT(whitespace)
     void (*bblPtr)(THREADID, ADDRINT, BblInfo*);
     void (*branchPtr)(THREADID, ADDRINT, BOOL, ADDRINT, ADDRINT);
     // Same as load/store functions, but last arg indicated whether op is executing
-    void (*predLoadPtr)(THREADID, ADDRINT, BOOL);
-    void (*predStorePtr)(THREADID, ADDRINT, BOOL);
+    void (*predLoadPtr)(THREADID, ADDRINT, ADDRINT, BOOL);
+    void (*predStorePtr)(THREADID, ADDRINT, ADDRINT, BOOL);
     uint64_t type;
     uint64_t pad[1];
     //NOTE: By having the struct be a power of 2 bytes, indirect calls are simpler (w/ gcc 4.4 -O3, 6->5 instructions, and those instructions are simpler)

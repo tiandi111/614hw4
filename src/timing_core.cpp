@@ -126,11 +126,11 @@ void TimingCore::BblAndRecordFunc(THREADID tid, ADDRINT bblAddr, BblInfo* bblInf
     }
 }
 
-void TimingCore::PredLoadAndRecordFunc(THREADID tid, ADDRINT addr, BOOL pred) {
+void TimingCore::PredLoadAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred) {
     if (pred) static_cast<TimingCore*>(cores[tid])->loadAndRecord(addr);
 }
 
-void TimingCore::PredStoreAndRecordFunc(THREADID tid, ADDRINT addr, BOOL pred) {
+void TimingCore::PredStoreAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred) {
     if (pred) static_cast<TimingCore*>(cores[tid])->storeAndRecord(addr);
 }
 

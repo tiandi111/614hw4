@@ -72,10 +72,10 @@ class TimingCore : public Core {
         inline void record(uint64_t startCycle);
 
         static void LoadAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc);
-        static void StoreAndRecordFunc(THREADID tid, ADDRINT addr,ADDRINT pc);
+        static void StoreAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc);
         static void BblAndRecordFunc(THREADID tid, ADDRINT bblAddr, BblInfo* bblInfo);
-        static void PredLoadAndRecordFunc(THREADID tid, ADDRINT addr, BOOL pred);
-        static void PredStoreAndRecordFunc(THREADID tid, ADDRINT addr, BOOL pred);
+        static void PredLoadAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred);
+        static void PredStoreAndRecordFunc(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred);
 
         static void BranchFunc(THREADID, ADDRINT, BOOL, ADDRINT, ADDRINT) {}
 } ATTR_LINE_ALIGNED;

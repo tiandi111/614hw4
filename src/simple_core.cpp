@@ -100,12 +100,12 @@ void SimpleCore::StoreFunc(THREADID tid, ADDRINT addr, ADDRINT pc) {
     static_cast<SimpleCore*>(cores[tid])->store(addr);
 }
 
-void SimpleCore::PredLoadFunc(THREADID tid, ADDRINT addr, BOOL pred) {
-    if (pred) static_cast<SimpleCore*>(cores[tid])->load(addr);
+void SimpleCore::PredLoadFunc(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred) {
+    if (pred) static_cast<SimpleCore*>(cores[tid])->load(addr, pc);
 }
 
-void SimpleCore::PredStoreFunc(THREADID tid, ADDRINT addr, BOOL pred) {
-    if (pred) static_cast<SimpleCore*>(cores[tid])->store(addr);
+void SimpleCore::PredStoreFunc(THREADID tid, ADDRINT addr, ADDRINT pc, BOOL pred) {
+    if (pred) static_cast<SimpleCore*>(cores[tid])->store(addr, pc);
 }
 
 void SimpleCore::BblFunc(THREADID tid, ADDRINT bblAddr, BblInfo* bblInfo) {
