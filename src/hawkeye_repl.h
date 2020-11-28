@@ -46,7 +46,7 @@ public:
 
     // predicts whether the given line will be a hit or a miss under OPT
     // true for hit, false for miss
-    uint8_t predict(uint32_t lineAddr, uint32_t pc, uint32_t cycle, uint32_t *lastPC) {
+    OptResult predict(uint32_t lineAddr, uint32_t pc, uint32_t cycle, uint32_t *lastPC) {
         uint32_t setid = lineAddr % numSets;
         uint32_t first = setid * setLen;
         uint32_t last = first + setLen;
@@ -67,7 +67,7 @@ public:
             }
         }
         // increment occVec if hit
-        uint8_t result = found ? (full ? miss : hit) : first;
+        OptResult result = found ? (full ? miss : hit) : first;
         if(result == hit) {
             for(uint32_t i = lastAccess; i < last; i++) { occVec[i]++; }
         }
