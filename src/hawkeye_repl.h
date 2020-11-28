@@ -5,6 +5,8 @@
 #ifndef HAWKEYE_REPL_H
 #define HAWKEYE_REPL_H
 
+#include "repl_policies.h"
+
 enum OptResult {
     hit,
     miss,
@@ -96,88 +98,88 @@ public:
 };
 
 class HawkeyeReplPolicy : public ReplPolicy {
-    protected:
-        uint8_t *predictor; // 3-bit counter predictor
-        uint8_t *array; // rrip array
-        uint32_t *cacheArray; // cache array
-        uint32_t ways;
-        uint32_t numLines;
-        uint32_t predictorLen;
-        uint32_t pcMask;
-        uint8_t rpvMax;
-        OPTgen optGen;
-    public:
-        HawkeyeReplPolicy(uint32_t _ways, uint32_t _numLines, uint8_t _pcIndexLen) :
-        ways(_ways), numLines(_numLines), rpvMax(7) {
-            predictorLen = 1 << _pcIndexLen;
-            pcMask = predictorLen - 1; // todo
-            predictor = gm_calloc<uint8_t>(predictorLen);
-            array = gm_calloc<uint8_t>(numLines);
-            cacheArray = gm_calloc<uint32_t>(numLines);
-            optGen = OPTgen(64, ways, 1);
-        }
+protected:
+    uint8_t *predictor; // 3-bit counter predictor
+    uint8_t *array; // rrip array
+    uint32_t *cacheArray; // cache array
+    uint32_t ways;
+    uint32_t numLines;
+    uint32_t predictorLen;
+    uint32_t pcMask;
+    uint8_t rpvMax;
+    OPTgen optGen;
+public:
+    HawkeyeReplPolicy(uint32_t _ways, uint32_t _numLines, uint8_t _pcIndexLen) :
+            ways(_ways), numLines(_numLines), rpvMax(7) {
+        predictorLen = 1 << _pcIndexLen;
+        pcMask = predictorLen - 1; // todo
+        predictor = gm_calloc<uint8_t>(predictorLen);
+        array = gm_calloc<uint8_t>(numLines);
+        cacheArray = gm_calloc<uint32_t>(numLines);
+        optGen = OPTgen(64, ways, 1);
+    }
 
-        ~HawkeyeReplPolicy() {
-            gm_free(array);
-            gm_free(cacheArray);
-            gm_free(predictor);
-            ~OPTgen();
-        }
+    ~HawkeyeReplPolicy() {
+        gm_free(array);
+        gm_free(cacheArray);
+        gm_free(predictor);
+        ~OPTgen();
+    }
 
-        // updates on cache hit
-        void update(uint32_t id, const MemReq* req) {
-            // update access history and occupancy vector, generate OPT result
-            uint32_t lastPC;
-            OptResult result = optGen.predict(req->lineAddr, req->pc, req->cycle, &lastPC);
-            // train predictor for the last pc
-            uint32_t idx = lastPC & pcMask;
-            if(result == hit) {
-                predictor[idx] += (predictor[idx] == rpvMax) ? 0 : 1;
-            } else if (result == miss) {
-                predictor[idx] -= (predictor[idx] == 0) ? 0 : 1;
+    // updates on cache hit
+    void update(uint32_t id, const MemReq *req) {
+        // update access history and occupancy vector, generate OPT result
+        uint32_t lastPC;
+        OptResult result = optGen.predict(req->lineAddr, req->pc, req->cycle, &lastPC);
+        // train predictor for the last pc
+        uint32_t idx = lastPC & pcMask;
+        if (result == hit) {
+            predictor[idx] += (predictor[idx] == rpvMax) ? 0 : 1;
+        } else if (result == miss) {
+            predictor[idx] -= (predictor[idx] == 0) ? 0 : 1;
+        }
+        // update rrip
+        bool fred = predictor[req->pc & pcMask] > 3;
+        array[id] = fred ? rpvMax : 0;
+    }
+
+    // updates rrip on miss
+    // since we don't pc here, all things need to be done here is moved into rank function below
+    virtual void replaced(uint32_t id) {}
+
+    // returns the replacement candidate
+    template<typename C>
+    inline uint32_t rank(const MemReq *req, C cands) {
+        uint32_t idx = req->pc & pcMask;
+        // ranks
+        uint8_t maxRRIP = array[0];
+        uint32_t maxIdx = 0;
+        for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
+            if (array[*ci] > maxRRIP) {
+                maxRRIP = array[*ci];
+                maxIdx = *ci;
             }
-            // update rrip
-            bool fred = predictor[req->pc & pcMask] > 3;
-            array[id] = fred? rpvMax : 0;
+            // two situations:
+            //      1. the entry is empty
+            //      2. the line is cache-averse
+            if (array[*ci] >= rpvMax) {
+                break;
+            }
         }
-
-        // updates rrip on miss
-        // since we don't pc here, all things need to be done here is moved into rank function below
-        virtual void replaced(uint32_t id) {}
-
-        // returns the replacement candidate
-        template <typename C> inline uint32_t rank(const MemReq* req, C cands) {
-            uint32_t idx = req->pc & pcMask;
-            // ranks
-            uint8_t maxRRIP = array[0];
-            uint32_t maxIdx = 0;
+        // miss on cache-friendly line, ages all other lines
+        if (predictor[idx] > 3) {
             for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
-                if(array[*ci] > maxRRIP) {
-                    maxRRIP = array[*ci];
-                    maxIdx = *ci;
-                }
-                // two situations:
-                //      1. the entry is empty
-                //      2. the line is cache-averse
-                if(array[*ci] >= rpvMax) {
-                    break;
-                }
+                array[*ci] += array[*ci] >= rpvMax ? 0 : 1;
             }
-            // miss on cache-friendly line, ages all other lines
-            if (predictor[idx] > 3) {
-                for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
-                    array[*ci] += array[*ci] >= rpvMax ? 0 : 1;
-                }
-            }
-            // detrains the predictor if eviction happens
-            if(array[*ci] <= rpvMax) {
-                uint32_t lastPC;
-                // if the evicted line is present in sampler, detrains the predictor
-                bool found = optGen.findLastPC(cacheArray[*ci], &lastPC);
-                if(found)
-                    uint32_t lastPcIdx = lastPC & pcMask;
-                    predictor[lastPcIdx] -= (predictor[lastPcIdx] == 0) ? 0 : 1;
-                }
+        }
+        // detrains the predictor if eviction happens
+        if (array[*ci] <= rpvMax) {
+            uint32_t lastPC;
+            // if the evicted line is present in sampler, detrains the predictor
+            bool found = optGen.findLastPC(cacheArray[*ci], &lastPC);
+            if (found) {
+                uint32_t lastPcIdx = lastPC & pcMask;
+                predictor[lastPcIdx] -= (predictor[lastPcIdx] == 0) ? 0 : 1;
             }
             // insert new line
             cacheArray[maxIdx] = req->lineAddr;
@@ -185,6 +187,7 @@ class HawkeyeReplPolicy : public ReplPolicy {
         }
 
         DECL_RANK_BINDINGS;
-};
+    };
+}
 
 #endif //INC_614HW4_HAWKEYE_REPL_H
