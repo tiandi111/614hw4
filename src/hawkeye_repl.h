@@ -59,7 +59,7 @@ public:
             }
             if(addrs[i] == (lineAddr & mask)) { // previous access found and the cache is not full, hit
                 lastAccess = i;
-                lastPC = pcs[i];
+                *lastPC = pcs[i];
                 found = true;
                 break;
             }
@@ -173,18 +173,18 @@ public:
             }
         }
         // detrains the predictor if eviction happens
-        if (array[*ci] <= rpvMax) {
+        if (array[maxIdx] <= rpvMax) {
             uint32_t lastPC;
             // if the evicted line is present in sampler, detrains the predictor
-            bool found = optGen.findLastPC(cacheArray[*ci], &lastPC);
+            bool found = optGen.findLastPC(cacheArray[maxIdx], &lastPC);
             if (found) {
                 uint32_t lastPcIdx = lastPC & pcMask;
                 predictor[lastPcIdx] -= (predictor[lastPcIdx] == 0) ? 0 : 1;
             }
-            // insert new line
-            cacheArray[maxIdx] = req->lineAddr;
-            return maxIdx;
         }
+        // insert new line
+        cacheArray[maxIdx] = req->lineAddr;
+        return maxIdx;
     }
 
     DECL_RANK_BINDINGS;
