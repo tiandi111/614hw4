@@ -185,9 +185,9 @@ public:
             cacheArray[maxIdx] = req->lineAddr;
             return maxIdx;
         }
+    }
 
-        DECL_RANK_BINDINGS;
-    };
-}
+    DECL_RANK_BINDINGS;
+};
 
 #endif //INC_614HW4_HAWKEYE_REPL_H
