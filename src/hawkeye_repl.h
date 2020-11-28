@@ -67,7 +67,7 @@ public:
             }
         }
         // increment occVec if hit
-        OptResult result = found ? (full ? miss : hit) : first;
+        OptResult result = found ? (full ? OptResult::miss : OptResult::hit) : OptResult::first;
         if(result == hit) {
             for(uint32_t i = lastAccess; i < last; i++) { occVec[i]++; }
         }
