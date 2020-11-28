@@ -130,7 +130,7 @@ public:
     // updates on cache hit
     void update(uint32_t id, const MemReq *req) {
         // update access history and occupancy vector, generate OPT result
-        uint32_t lastPC;
+        uint32_t lastPC = 0;
         OptResult result = optGen.predict(req->lineAddr, req->pc, req->cycle, &lastPC);
         // train predictor for the last pc
         uint32_t idx = lastPC & pcMask;
