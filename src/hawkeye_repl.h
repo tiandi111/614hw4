@@ -6,6 +6,97 @@
 #define HAWKEYE_REPL_H
 
 class HawkeyeReplPolicy : public ReplPolicy {
+    enum OptResult {
+        hit,
+        miss,
+        first
+    };
+
+    // data structures for OPTgen
+    class OPTgen {
+    protected:
+        // sampled cache, use lru replacement policy, set-associative
+        uint32_t *pcs;
+        uint32_t *addrs;
+        uint32_t setLen;
+        uint32_t sampleCacheSize; // the size of the sample cache
+        uint32_t mask;
+        // occupancy vector
+        uint32_t *occVec;
+        // cache sets
+        uint32_t numSets;
+        uint32_t ways;
+    public:
+        OPTgen(uint32_t _sets, uint32_t _ways, uint32_t _timeQuantum) : numSets(_sets), ways(_ways) {
+            mask = 0x0000FFFF;
+            setLen = 8 * ways;
+            sampleCacheSize = numSets * setLen;
+            pcs = gm_calloc<uint32_t>(sampleCacheSize);
+            addrs = gm_calloc<uint32_t>(sampleCacheSize);
+            occVec = gm_calloc<uint32_t>(sampleCacheSize);
+        }
+
+        ~OPTgen() {
+            gm_free(pcs);
+            gm_free(addrs);
+            gm_free(occVec);
+        }
+
+        // predicts whether the given line will be a hit or a miss under OPT
+        // true for hit, false for miss
+        uint8_t predict(uint32_t lineAddr, uint32_t pc, uint32_t cycle, uint32_t *lastPC) {
+            uint32_t setid = lineAddr % numSets;
+            uint32_t first = setid * setLen;
+            uint32_t last = first + setLen;
+            // find the last empty entry
+            while((last > first) && (addrs[last-1] < 0)) { last--; }
+            // find the last access
+            uint32_t lastAccess = last;
+            bool full = false, found = false;
+            for(uint32_t i=last-1; i>=first; i--) {
+                if(occVec[i] >= setLen) { // previous access has not been found and the cache is already full
+                    full = true;
+                }
+                if(addrs[i] == (lineAddr & mask) { // previous access found and the cache is not full, hit
+                    lastAccess = i;
+                    lastPC = pcs[i];
+                    found = true;
+                    break;
+                }
+            }
+            // increment occVec if hit
+            uint8_t result = found ? (full ? miss : hit) : first;
+            if(result == hit) {
+                for(uint32_t i = lastAccess; i < last; i++) { occVec[i]++; }
+            }
+            // if occupancy vector is full, shift left by 1
+            if(last >= (first + setLen)) {
+                for(uint32_t i = first; i < (first + setLen - 1); i++) {
+                    addrs[i] = addrs[i+1];
+                    pcs[i] = pcs[i+1];
+                    occVec[i] = occVec[i+1];
+                }
+            }
+            addrs[last-1] = lineAddr & mask;
+            pcs[last-1] = pc & mask;
+            occVec[last-1] = 0;
+            return result;
+        }
+
+        bool findLastPC(uint32_t lineAddr, uint32_t *lastPC) {
+            uint32_t setid = lineAddr % numSets;
+            uint32_t first = setid * setLen;
+            uint32_t last = first + setLen;
+            for (uint32_t i = last-1; i >=first; i--) {
+                if(addrs[i] == (lineAddr & mask)) {
+                    *lastPC = pcs[i];
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+
     protected:
         uint8_t *predictor; // 3-bit counter predictor
         uint8_t *array; // rrip array
@@ -95,97 +186,6 @@ class HawkeyeReplPolicy : public ReplPolicy {
         }
 
         DECL_RANK_BINDINGS;
-
-        enum OptResult {
-            hit,
-            miss,
-            first
-        };
-
-        // data structures for OPTgen
-        class OPTgen {
-            protected:
-                // sampled cache, use lru replacement policy, set-associative
-                uint32_t *pcs;
-                uint32_t *addrs;
-                uint32_t setLen;
-                uint32_t sampleCacheSize; // the size of the sample cache
-                uint32_t mask;
-                // occupancy vector
-                uint32_t *occVec;
-                // cache sets
-                uint32_t numSets;
-                uint32_t ways;
-        public:
-                OPTgen(uint32_t _sets, uint32_t _ways, uint32_t _timeQuantum) : numSets(_sets), ways(_ways) {
-                    mask = 0x0000FFFF;
-                    setLen = 8 * ways;
-                    sampleCacheSize = numSets * setLen;
-                    pcs = gm_calloc<uint32_t>(sampleCacheSize);
-                    addrs = gm_calloc<uint32_t>(sampleCacheSize);
-                    occVec = gm_calloc<uint32_t>(sampleCacheSize);
-                }
-
-                ~OPTgen() {
-                    gm_free(pcs);
-                    gm_free(addrs);
-                    gm_free(occVec);
-                }
-
-                // predicts whether the given line will be a hit or a miss under OPT
-                // true for hit, false for miss
-                uint8_t predict(uint32_t lineAddr, uint32_t pc, uint32_t cycle, uint32_t *lastPC) {
-                    uint32_t setid = lineAddr % numSets;
-                    uint32_t first = setid * setLen;
-                    uint32_t last = first + setLen;
-                    // find the last empty entry
-                    while((last > first) && (addrs[last-1] < 0)) { last--; }
-                    // find the last access
-                    uint32_t lastAccess = last;
-                    bool full = false, found = false;
-                    for(uint32_t i=last-1; i>=first; i--) {
-                        if(occVec[i] >= setLen) { // previous access has not been found and the cache is already full
-                            full = true;
-                        }
-                        if(addrs[i] == (lineAddr & mask) { // previous access found and the cache is not full, hit
-                            lastAccess = i;
-                            lastPC = pcs[i];
-                            found = true;
-                            break;
-                        }
-                    }
-                    // increment occVec if hit
-                    uint8_t result = found ? (full ? miss : hit) : first;
-                    if(result == hit) {
-                        for(uint32_t i = lastAccess; i < last; i++) { occVec[i]++; }
-                    }
-                    // if occupancy vector is full, shift left by 1
-                    if(last >= (first + setLen)) {
-                        for(uint32_t i = first; i < (first + setLen - 1); i++) {
-                            addrs[i] = addrs[i+1];
-                            pcs[i] = pcs[i+1];
-                            occVec[i] = occVec[i+1];
-                        }
-                    }
-                    addrs[last-1] = lineAddr & mask;
-                    pcs[last-1] = pc & mask;
-                    occVec[last-1] = 0;
-                    return result;
-                }
-
-                bool findLastPC(uint32_t lineAddr, uint32_t *lastPC) {
-                    uint32_t setid = lineAddr % numSets;
-                    uint32_t first = setid * setLen;
-                    uint32_t last = first + setLen;
-                    for (uint32_t i = last-1; i >=first; i--) {
-                        if(addrs[i] == (lineAddr & mask)) {
-                           *lastPC = pcs[i];
-                           return true;
-                        }
-                    }
-                    return false;
-                }
-        };
 };
 
 #endif //INC_614HW4_HAWKEYE_REPL_H
