@@ -27,6 +27,8 @@ protected:
     // cache sets
     uint32_t numSets;
 public:
+    OPTgen() {}
+
     OPTgen(uint32_t _sets, uint32_t _ways, uint32_t _timeQuantum) : numSets(_sets) {
         mask = 0x0000FFFF;
         setLen = 8 * _ways;
@@ -123,7 +125,6 @@ public:
         gm_free(array);
         gm_free(cacheArray);
         gm_free(predictor);
-        ~OPTgen();
     }
 
     // updates on cache hit
