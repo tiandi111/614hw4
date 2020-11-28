@@ -174,7 +174,7 @@ class HawkeyeReplPolicy : public ReplPolicy {
             if(array[*ci] <= rpvMax) {
                 uint32_t lastPC;
                 // if the evicted line is present in sampler, detrains the predictor
-                bool found = optGen.findLastPC(addrs[*ci], &lastPC));
+                bool found = optGen.findLastPC(addrs[*ci], &lastPC);
                 if(found)
                     uint32_t lastPcIdx = lastPC & pcMask;
                     predictor[lastPcIdx] -= (predictor[lastPcIdx] == 0) ? 0 : 1;
