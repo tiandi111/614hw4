@@ -57,7 +57,7 @@ public:
             if(occVec[i] >= setLen) { // previous access has not been found and the cache is already full
                 full = true;
             }
-            if(addrs[i] == (lineAddr & mask) { // previous access found and the cache is not full, hit
+            if(addrs[i] == (lineAddr & mask)) { // previous access found and the cache is not full, hit
                 lastAccess = i;
                 lastPC = pcs[i];
                 found = true;
