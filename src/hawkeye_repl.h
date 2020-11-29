@@ -29,13 +29,18 @@ protected:
 public:
     OPTgen() {}
 
-    OPTgen(uint32_t _sets, uint32_t _ways, uint32_t _timeQuantum) : numSets(_sets) {
+    OPTgen(uint32_t _sets, uint32_t ways, uint32_t _timeQuantum) : numSets(_sets) {
         mask = 0x0000FFFF;
-        setLen = 8 * _ways;
+        setLen = 8 * ways;
         sampleCacheSize = numSets * setLen;
         pcs = gm_calloc<uint32_t>(sampleCacheSize);
         addrs = gm_calloc<uint32_t>(sampleCacheSize);
         occVec = gm_calloc<uint32_t>(sampleCacheSize);
+        for(uint32_t i=0; i<sampleCacheSize; i++) {
+            pcs[i] = 0;
+            addrs[i] = 0;
+            occVec[i] = 0;
+        }
     }
 
     ~OPTgen() {
@@ -51,7 +56,7 @@ public:
         uint32_t first = setid * setLen;
         uint32_t last = first + setLen;
         // find the last empty entry
-        while((last > first) && (addrs[last-1] < 0)) { last--; }
+        while((last > first) && (addrs[last-1] <= 0)) { last--; }
         // find the last access
         uint32_t lastAccess = last;
         bool full = false, found = false;
@@ -114,11 +119,18 @@ public:
     HawkeyeReplPolicy(uint32_t _ways, uint32_t _numLines, uint8_t _pcIndexLen) :
             ways(_ways), numLines(_numLines), rpvMax(7) {
         predictorLen = 1 << _pcIndexLen;
-        pcMask = predictorLen - 1; // todo
+        pcMask = predictorLen - 1;
         predictor = gm_calloc<uint8_t>(predictorLen);
         array = gm_calloc<uint8_t>(numLines);
         cacheArray = gm_calloc<uint32_t>(numLines);
         optGen = OPTgen(64, ways, 1);
+        for(uint32_t i=0; i<numLines; i++) {
+            array[i] = rpvMax+1;
+            cacheArray[i] = 0;
+        }
+        for(uint32_t i=0; i<predictorLen; i++) {
+            array[i] = 0;
+        }
     }
 
     ~HawkeyeReplPolicy() {
