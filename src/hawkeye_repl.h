@@ -61,7 +61,7 @@ public:
         // find the last access
         uint32_t lastAccess = last;
         bool full = false, found = false;
-        for(uint32_t i=0; i<setLen; i++) {
+        for(uint32_t i=0; i<(last-first); i++) {
             uint32_t idx = last-1-i;
             if(occVec[idx] >= setLen) { // previous access has not been found and the cache is already full
                 full = true;
@@ -85,10 +85,11 @@ public:
                 pcs[i] = pcs[i+1];
                 occVec[i] = occVec[i+1];
             }
+            last = first + setLen - 1;
         }
-        addrs[last-1] = lineAddr;
-        pcs[last-1] = pc;
-        occVec[last-1] = 0;
+        addrs[last] = lineAddr;
+        pcs[last] = pc;
+        occVec[last] = 0;
         return result;
     }
 
@@ -96,9 +97,9 @@ public:
         uint32_t setid = lineAddr % numSets;
         uint32_t first = setid * setLen;
         uint32_t last = first + setLen;
-        for (uint32_t i = last-1; i >=first; i--) {
-            if(addrs[i] == lineAddr) {
-                *lastPC = pcs[i];
+        for (uint32_t i = last; i > first; i--) {
+            if(addrs[i-1] == lineAddr) {
+                *lastPC = pcs[i-1];
                 return true;
             }
         }
