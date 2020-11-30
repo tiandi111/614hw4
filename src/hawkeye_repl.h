@@ -6,6 +6,7 @@
 #define HAWKEYE_REPL_H
 
 #include "repl_policies.h"
+#include <iostream>
 
 enum OptResult {
     hit,
@@ -61,6 +62,7 @@ public:
         uint32_t lastAccess = last;
         bool full = false, found = false;
         for(uint32_t i=last-1; i>=first; i--) {
+            std::cout<< i <<std::endl;
             if(occVec[i] >= setLen) { // previous access has not been found and the cache is already full
                 full = true;
             }
