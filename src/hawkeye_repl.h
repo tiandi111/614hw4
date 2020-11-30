@@ -17,8 +17,8 @@ enum OptResult {
 class OPTgen {
 protected:
     // sampled cache, use lru replacement policy, set-associative
-    uint32_t *pcs;
-    uint32_t *addrs;
+    uint64_t *pcs;
+    uint64_t *addrs;
     uint32_t setLen;
     uint32_t sampleCacheSize; // the size of the sample cache
     uint32_t mask;
@@ -29,12 +29,12 @@ protected:
 public:
     OPTgen() {}
 
-    OPTgen(uint32_t _sets, uint32_t ways, uint32_t _timeQuantum) : numSets(_sets) {
+    OPTgen(uint32_t _sets, uint32_t ways) : numSets(_sets) {
         mask = 0x0000FFFF;
         setLen = 8 * ways;
         sampleCacheSize = numSets * setLen;
-        pcs = gm_calloc<uint32_t>(sampleCacheSize);
-        addrs = gm_calloc<uint32_t>(sampleCacheSize);
+        pcs = gm_calloc<uint64_t>(sampleCacheSize);
+        addrs = gm_calloc<uint64_t>(sampleCacheSize);
         occVec = gm_calloc<uint32_t>(sampleCacheSize);
         for(uint32_t i=0; i<sampleCacheSize; i++) {
             pcs[i] = 0;
@@ -51,7 +51,7 @@ public:
 
     // predicts whether the given line will be a hit or a miss under OPT
     // true for hit, false for miss
-    OptResult predict(uint32_t lineAddr, uint32_t pc, uint32_t cycle, uint32_t *lastPC) {
+    OptResult predict(uint64_t lineAddr, uint64_t pc, uint64_t *lastPC) {
         uint32_t setid = lineAddr % numSets;
         uint32_t first = setid * setLen;
         uint32_t last = first + setLen;
@@ -64,7 +64,7 @@ public:
             if(occVec[i] >= setLen) { // previous access has not been found and the cache is already full
                 full = true;
             }
-            if(addrs[i] == (lineAddr & mask)) { // previous access found and the cache is not full, hit
+            if(addrs[i] == lineAddr) { // previous access found
                 lastAccess = i;
                 *lastPC = pcs[i];
                 found = true;
@@ -73,7 +73,7 @@ public:
         }
         // increment occVec if hit
         OptResult result = found ? (full ? OptResult::miss : OptResult::hit) : OptResult::first;
-        if(result == hit) {
+        if(result == OptResult::hit) {
             for(uint32_t i = lastAccess; i < last; i++) { occVec[i]++; }
         }
         // if occupancy vector is full, shift left by 1
@@ -84,18 +84,18 @@ public:
                 occVec[i] = occVec[i+1];
             }
         }
-        addrs[last-1] = lineAddr & mask;
-        pcs[last-1] = pc & mask;
+        addrs[last-1] = lineAddr;
+        pcs[last-1] = pc;
         occVec[last-1] = 0;
         return result;
     }
 
-    bool findLastPC(uint32_t lineAddr, uint32_t *lastPC) {
+    bool findLastPC(uint64_t lineAddr, uint64_t *lastPC) {
         uint32_t setid = lineAddr % numSets;
         uint32_t first = setid * setLen;
         uint32_t last = first + setLen;
         for (uint32_t i = last-1; i >=first; i--) {
-            if(addrs[i] == (lineAddr & mask)) {
+            if(addrs[i] == lineAddr) {
                 *lastPC = pcs[i];
                 return true;
             }
@@ -106,9 +106,9 @@ public:
 
 class HawkeyeReplPolicy : public ReplPolicy {
 protected:
-    uint8_t *predictor; // 3-bit counter predictor
-    uint8_t *array; // rrip array
-    uint32_t *cacheArray; // cache array
+    uint32_t *predictor; // 3-bit counter predictor
+    uint32_t *array; // rrip array
+    uint64_t *cacheArray; // cache array
     uint32_t ways;
     uint32_t numLines;
     uint32_t predictorLen;
@@ -120,16 +120,19 @@ public:
             ways(_ways), numLines(_numLines), rpvMax(7) {
         predictorLen = 1 << _pcIndexLen;
         pcMask = predictorLen - 1;
-        predictor = gm_calloc<uint8_t>(predictorLen);
-        array = gm_calloc<uint8_t>(numLines);
-        cacheArray = gm_calloc<uint32_t>(numLines);
+
+        predictor = gm_calloc<uint32_t>(predictorLen);
+        array = gm_calloc<uint32_t>(numLines);
+        cacheArray = gm_calloc<uint64_t>(numLines);
+
         optGen = OPTgen(64, ways, 1);
+
         for(uint32_t i=0; i<numLines; i++) {
             array[i] = rpvMax+1;
             cacheArray[i] = 0;
         }
         for(uint32_t i=0; i<predictorLen; i++) {
-            array[i] = 0;
+            predictor[i] = 0;
         }
     }
 
@@ -142,18 +145,18 @@ public:
     // updates on cache hit
     void update(uint32_t id, const MemReq *req) {
         // update access history and occupancy vector, generate OPT result
-        uint32_t lastPC = 0;
-        OptResult result = optGen.predict(req->lineAddr, req->pc, req->cycle, &lastPC);
+        uint64_t lastPC = 0;
+        OptResult result = optGen.predict(req->lineAddr, req->pc, &lastPC);
         // train predictor for the last pc
         uint32_t idx = lastPC & pcMask;
-        if (result == hit) {
+        if (result == OptResult::hit) {
             predictor[idx] += (predictor[idx] == rpvMax) ? 0 : 1;
-        } else if (result == miss) {
+        } else if (result == OptResult::miss) {
             predictor[idx] -= (predictor[idx] == 0) ? 0 : 1;
         }
         // update rrip
         bool fred = predictor[req->pc & pcMask] > 3;
-        array[id] = fred ? rpvMax : 0;
+        array[id] = fred ? 0 : rpvMax;
     }
 
     // updates rrip on miss
@@ -165,8 +168,8 @@ public:
     inline uint32_t rank(const MemReq *req, C cands) {
         uint32_t idx = req->pc & pcMask;
         // ranks
-        uint8_t maxRRIP = array[0];
-        uint32_t maxIdx = 0;
+        uint32_t maxRRIP = array[*cands.begin()];
+        uint32_t maxIdx = *cands.begin();
         for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
             if (array[*ci] > maxRRIP) {
                 maxRRIP = array[*ci];
@@ -182,7 +185,7 @@ public:
         // miss on cache-friendly line, ages all other lines
         if (predictor[idx] > 3) {
             for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
-                array[*ci] += array[*ci] >= rpvMax ? 0 : 1;
+                array[*ci] += (array[*ci] >= (rpvMax-1)) ? 0 : 1;
             }
         }
         // detrains the predictor if eviction happens
