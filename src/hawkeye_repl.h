@@ -113,7 +113,7 @@ protected:
     uint32_t numLines;
     uint32_t predictorLen;
     uint32_t pcMask;
-    uint8_t rpvMax;
+    uint32_t rpvMax;
     OPTgen optGen;
 public:
     HawkeyeReplPolicy(uint32_t _ways, uint32_t _numLines, uint8_t _pcIndexLen) :
@@ -125,7 +125,7 @@ public:
         array = gm_calloc<uint32_t>(numLines);
         cacheArray = gm_calloc<uint64_t>(numLines);
 
-        optGen = OPTgen(64, ways, 1);
+        optGen = OPTgen(64, ways);
 
         for(uint32_t i=0; i<numLines; i++) {
             array[i] = rpvMax+1;
@@ -150,9 +150,9 @@ public:
         // train predictor for the last pc
         uint32_t idx = lastPC & pcMask;
         if (result == OptResult::hit) {
-            predictor[idx] += (predictor[idx] == rpvMax) ? 0 : 1;
+            predictor[idx] += (predictor[idx] >= rpvMax) ? 0 : 1;
         } else if (result == OptResult::miss) {
-            predictor[idx] -= (predictor[idx] == 0) ? 0 : 1;
+            predictor[idx] -= (predictor[idx] <= 0) ? 0 : 1;
         }
         // update rrip
         bool fred = predictor[req->pc & pcMask] > 3;
@@ -185,12 +185,12 @@ public:
         // miss on cache-friendly line, ages all other lines
         if (predictor[idx] > 3) {
             for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
-                array[*ci] += (array[*ci] >= (rpvMax-1)) ? 0 : 1;
+                array[*ci] += (array[*ci] >= (uint32_t)(rpvMax-1)) ? 0 : 1;
             }
         }
         // detrains the predictor if eviction happens
         if (array[maxIdx] <= rpvMax) {
-            uint32_t lastPC;
+            uint64_t lastPC;
             // if the evicted line is present in sampler, detrains the predictor
             bool found = optGen.findLastPC(cacheArray[maxIdx], &lastPC);
             if (found) {
