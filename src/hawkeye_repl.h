@@ -61,14 +61,14 @@ public:
         // find the last access
         uint32_t lastAccess = last;
         bool full = false, found = false;
-        for(uint32_t i=last-1; i>=first; i--) {
-            std::cout<< i <<std::endl;
-            if(occVec[i] >= setLen) { // previous access has not been found and the cache is already full
+        for(uint32_t i=0; i<setLen; i++) {
+            uint32_t idx = last-1-i;
+            if(occVec[idx] >= setLen) { // previous access has not been found and the cache is already full
                 full = true;
             }
-            if(addrs[i] == lineAddr) { // previous access found
-                lastAccess = i;
-                *lastPC = pcs[i];
+            if(addrs[idx] == lineAddr) { // previous access found
+                lastAccess = idx;
+                *lastPC = pcs[idx];
                 found = true;
                 break;
             }
