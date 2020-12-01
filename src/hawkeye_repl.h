@@ -207,7 +207,7 @@ public:
             }
         }
         // detrains the predictor if a cache-friendly line is evicted
-        if (array[maxIdx] < rpvMax)) {
+        if (array[maxIdx] < rpvMax) {
             uint64_t lastPC = 0;
             // if the evicted line is present in sampler, detrains the predictor
             bool found = optGen.findLastPC(cacheArray[maxIdx], &lastPC);
