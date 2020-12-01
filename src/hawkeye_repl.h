@@ -40,9 +40,9 @@ public:
         setLen = 8 * ways;
         sampleCacheSize = numSets * setLen;
         // encountered memory problems when using gm_calloc and not time to solve it
-        pcs = new uint64_t[];
-        addrs = new uint64_t[];
-        occVec = new uint32_t[];
+        pcs = new uint64_t[sampleCacheSize];
+        addrs = new uint64_t[sampleCacheSize];
+        occVec = new uint32_t[sampleCacheSize];
 //        pcs = gm_calloc<uint64_t>(sampleCacheSize);
 //        addrs = gm_calloc<uint64_t>(sampleCacheSize);
 //        occVec = gm_calloc<uint32_t>(sampleCacheSize);
