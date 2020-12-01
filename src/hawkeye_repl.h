@@ -29,11 +29,12 @@ protected:
     uint32_t *occVec;
     // cache sets
     uint32_t numSets;
+    uint32_t ways;
     HashFamily* hf;
 public:
     OPTgen() {}
 
-    OPTgen(uint32_t _sets, uint32_t ways, HashFamily* _hf) : numSets(_sets), hf(_hf) {
+    OPTgen(uint32_t _sets, uint32_t _ways, HashFamily* _hf) : numSets(_sets), hf(_hf), ways(_ways) {
         assert_msg(isPow2(numSets), "must have a power of 2 # sets, but you specified %d", numSets);
         setMask = numSets - 1;
         mask = 0x0000FFFF;
@@ -73,7 +74,7 @@ public:
         bool full = false, found = false;
         for(uint32_t i=0; i<(last-first); i++) {
             uint32_t idx = last-1-i;
-            if(occVec[idx] >= setLen) { // previous access has not been found and the cache is already full
+            if(occVec[idx] >= ways) { // previous access has not been found and the cache is already full
                 full = true;
             }
             if((addrs[idx] & mask) == (lineAddr & mask)) { // previous access found
@@ -189,7 +190,7 @@ public:
                 maxRRIP = array[*ci];
                 maxIdx = *ci;
             }
-            // two situations:
+            // two cases:
             //      1. the entry is empty
             //      2. the line is cache-averse
             if (array[*ci] >= rpvMax) {
@@ -197,14 +198,15 @@ public:
             }
         }
         // miss on cache-friendly line, ages all other lines
-        if (predictor[idx] > 3) {
+        bool fred = predictor[idx] > 3;
+        if (fred) {
             for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
                 array[*ci] += (array[*ci] >= (uint32_t)(rpvMax-1)) ? 0 : 1;
             }
         }
-        // detrains the predictor if eviction happens
-        if (array[maxIdx] <= rpvMax) {
-            uint64_t lastPC;
+        // detrains the predictor if a cache-friendly line is evicted
+        if (fred && (array[maxIdx] <= rpvMax)) {
+            uint64_t lastPC = 0;
             // if the evicted line is present in sampler, detrains the predictor
             bool found = optGen.findLastPC(cacheArray[maxIdx], &lastPC);
             if (found) {
