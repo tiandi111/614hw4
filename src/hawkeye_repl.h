@@ -123,6 +123,8 @@ protected:
     uint32_t *predictor; // 3-bit counter predictor
     uint32_t *array; // rrip array
     uint64_t *cacheArray; // cache array
+    uint64_t *time;
+    uint64_t timestamp;
     uint32_t ways;
     uint32_t numLines;
     uint32_t predictorLen;
@@ -135,16 +137,19 @@ public:
             ways(_ways), numLines(_numLines), rpvMax(7), hf(_hf) {
         predictorLen = 1 << _pcIndexLen;
         pcMask = predictorLen - 1;
+        timestamp = 0;
 
         predictor = gm_calloc<uint32_t>(predictorLen);
         array = gm_calloc<uint32_t>(numLines);
         cacheArray = gm_calloc<uint64_t>(numLines);
+        time = gm_calloc<uint64_t>(numLines);
 
         optGen = OPTgen(64, ways, _hf);
 
         for(uint32_t i=0; i<numLines; i++) {
             array[i] = rpvMax+1;
             cacheArray[i] = 0;
+            time[i] = 0;
         }
         for(uint32_t i=0; i<predictorLen; i++) {
             predictor[i] = 0;
@@ -154,6 +159,7 @@ public:
     ~HawkeyeReplPolicy() {
         gm_free(array);
         gm_free(cacheArray);
+        gm_free(time);
         gm_free(predictor);
     }
 
@@ -172,6 +178,7 @@ public:
         // update rrip
         bool fred = predictor[hf->hash(0, req->pc) & pcMask] > 3;
         array[id] = fred ? 0 : rpvMax;
+        time[id] = timestamp++;
     }
 
     // updates rrip on miss
@@ -185,10 +192,13 @@ public:
         // ranks
         uint32_t maxRRIP = array[*cands.begin()];
         uint32_t maxIdx = *cands.begin();
+        uint32_t leastTime = time[*cands.begin()];
         for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
-            if (array[*ci] > maxRRIP) {
+            // update the candidate either the current line has greater RRIP or has equal RRIP but is less recently used
+            if ((array[*ci] > maxRRIP) || ((array[*ci] == maxRRIP) && (time[*ci] < leastTime))) {
                 maxRRIP = array[*ci];
                 maxIdx = *ci;
+                leastTime = time[*ci];
             }
             // two cases:
             //      1. the entry is empty
