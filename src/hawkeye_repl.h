@@ -201,17 +201,19 @@ public:
         bool fred = predictor[idx] > 3;
         if (fred) {
             for (auto ci = cands.begin(); ci != cands.end(); ci.inc()) {
-                array[*ci] += (array[*ci] >= (uint32_t)(rpvMax-1)) ? 0 : 1;
+                if(*ci != idx) {
+                    array[*ci] += (array[*ci] >= (uint32_t)(rpvMax-1)) ? 0 : 1;
+                }
             }
         }
         // detrains the predictor if a cache-friendly line is evicted
-        if (fred && (array[maxIdx] <= rpvMax)) {
+        if (array[maxIdx] < rpvMax)) {
             uint64_t lastPC = 0;
             // if the evicted line is present in sampler, detrains the predictor
             bool found = optGen.findLastPC(cacheArray[maxIdx], &lastPC);
             if (found) {
                 uint32_t lastPcIdx = hf->hash(0, lastPC) & pcMask;
-                predictor[lastPcIdx] -= (predictor[lastPcIdx] == 0) ? 0 : 1;
+                predictor[lastPcIdx] -= (predictor[lastPcIdx] <= 0) ? 0 : 1;
             }
         }
         // insert new line
