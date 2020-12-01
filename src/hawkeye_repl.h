@@ -34,7 +34,7 @@ protected:
 public:
     OPTgen() {}
 
-    OPTgen(uint32_t _sets, uint32_t _ways, HashFamily* _hf) : numSets(_sets), hf(_hf), ways(_ways) {
+    OPTgen(uint32_t _sets, uint32_t _ways, HashFamily* _hf) : numSets(_sets), ways(_ways), hf(_hf) {
         assert_msg(isPow2(numSets), "must have a power of 2 # sets, but you specified %d", numSets);
         setMask = numSets - 1;
         mask = 0x0000FFFF;
