@@ -7,6 +7,7 @@
 
 #include "repl_policies.h"
 #include <iostream>
+#include "hash.h"
 
 enum OptResult {
     hit,
@@ -23,20 +24,28 @@ protected:
     uint32_t setLen;
     uint32_t sampleCacheSize; // the size of the sample cache
     uint32_t mask;
+    uint32_t setMask;
     // occupancy vector
     uint32_t *occVec;
     // cache sets
     uint32_t numSets;
+    HashFamily* hf;
 public:
     OPTgen() {}
 
-    OPTgen(uint32_t _sets, uint32_t ways) : numSets(_sets) {
+    OPTgen(uint32_t _sets, uint32_t ways, HashFamily* _hf) : numSets(_sets), hf(_hf) {
+        assert_msg(isPow2(numSets), "must have a power of 2 # sets, but you specified %d", numSets);
+        setMask = numSets - 1;
         mask = 0x0000FFFF;
         setLen = 8 * ways;
         sampleCacheSize = numSets * setLen;
-        pcs = gm_calloc<uint64_t>(sampleCacheSize);
-        addrs = gm_calloc<uint64_t>(sampleCacheSize);
-        occVec = gm_calloc<uint32_t>(sampleCacheSize);
+        // encountered memory problems when using gm_calloc and not time to solve it
+        pcs = new uint64_t[];
+        addrs = new uint64_t[];
+        occVec = new uint32_t[];
+//        pcs = gm_calloc<uint64_t>(sampleCacheSize);
+//        addrs = gm_calloc<uint64_t>(sampleCacheSize);
+//        occVec = gm_calloc<uint32_t>(sampleCacheSize);
         for(uint32_t i=0; i<sampleCacheSize; i++) {
             pcs[i] = 0;
             addrs[i] = 0;
@@ -45,15 +54,16 @@ public:
     }
 
     ~OPTgen() {
-        gm_free(pcs);
-        gm_free(addrs);
-        gm_free(occVec);
+        // delete [] also raise errors, no time to fix
+//        gm_free(pcs);
+//        gm_free(addrs);
+//        gm_free(occVec);
     }
 
     // predicts whether the given line will be a hit or a miss under OPT
     // true for hit, false for miss
-    OptResult predict(uint64_t lineAddr, uint64_t pc, uint64_t *lastPC) {
-        uint32_t setid = lineAddr % numSets;
+    OptResult  predict(uint64_t lineAddr, uint64_t pc, uint64_t *lastPC) {
+        uint32_t setid = hf->hash(0, lineAddr) & setMask;
         uint32_t first = setid * setLen;
         uint32_t last = first + setLen;
         // find the last empty entry
@@ -66,7 +76,7 @@ public:
             if(occVec[idx] >= setLen) { // previous access has not been found and the cache is already full
                 full = true;
             }
-            if(addrs[idx] == lineAddr) { // previous access found
+            if((addrs[idx] & mask) == (lineAddr & mask)) { // previous access found
                 lastAccess = idx;
                 *lastPC = pcs[idx];
                 found = true;
@@ -94,11 +104,11 @@ public:
     }
 
     bool findLastPC(uint64_t lineAddr, uint64_t *lastPC) {
-        uint32_t setid = lineAddr % numSets;
+        uint32_t setid = hf->hash(0, lineAddr) & setMask;
         uint32_t first = setid * setLen;
         uint32_t last = first + setLen;
         for (uint32_t i = last; i > first; i--) {
-            if(addrs[i-1] == lineAddr) {
+            if((addrs[i-1] & mask) == (lineAddr & mask)) {
                 *lastPC = pcs[i-1];
                 return true;
             }
@@ -117,10 +127,11 @@ protected:
     uint32_t predictorLen;
     uint32_t pcMask;
     uint32_t rpvMax;
+    HashFamily* hf;
     OPTgen optGen;
 public:
-    HawkeyeReplPolicy(uint32_t _ways, uint32_t _numLines, uint8_t _pcIndexLen) :
-            ways(_ways), numLines(_numLines), rpvMax(7) {
+    HawkeyeReplPolicy(uint32_t _ways, uint32_t _numLines, uint8_t _pcIndexLen, HashFamily* _hf) :
+            ways(_ways), numLines(_numLines), rpvMax(7), hf(_hf) {
         predictorLen = 1 << _pcIndexLen;
         pcMask = predictorLen - 1;
 
@@ -128,7 +139,7 @@ public:
         array = gm_calloc<uint32_t>(numLines);
         cacheArray = gm_calloc<uint64_t>(numLines);
 
-        optGen = OPTgen(64, ways);
+        optGen = OPTgen(64, ways, _hf);
 
         for(uint32_t i=0; i<numLines; i++) {
             array[i] = rpvMax+1;
@@ -151,14 +162,14 @@ public:
         uint64_t lastPC = 0;
         OptResult result = optGen.predict(req->lineAddr, req->pc, &lastPC);
         // train predictor for the last pc
-        uint32_t idx = lastPC & pcMask;
+        uint32_t idx = hf->hash(0, lastPC) & pcMask;
         if (result == OptResult::hit) {
             predictor[idx] += (predictor[idx] >= rpvMax) ? 0 : 1;
         } else if (result == OptResult::miss) {
             predictor[idx] -= (predictor[idx] <= 0) ? 0 : 1;
         }
         // update rrip
-        bool fred = predictor[req->pc & pcMask] > 3;
+        bool fred = predictor[hf->hash(0, req->pc) & pcMask] > 3;
         array[id] = fred ? 0 : rpvMax;
     }
 
@@ -169,7 +180,7 @@ public:
     // returns the replacement candidate
     template<typename C>
     inline uint32_t rank(const MemReq *req, C cands) {
-        uint32_t idx = req->pc & pcMask;
+        uint32_t idx = hf->hash(0, req->pc) & pcMask;
         // ranks
         uint32_t maxRRIP = array[*cands.begin()];
         uint32_t maxIdx = *cands.begin();
@@ -197,7 +208,7 @@ public:
             // if the evicted line is present in sampler, detrains the predictor
             bool found = optGen.findLastPC(cacheArray[maxIdx], &lastPC);
             if (found) {
-                uint32_t lastPcIdx = lastPC & pcMask;
+                uint32_t lastPcIdx = hf->hash(0, lastPC) & pcMask;
                 predictor[lastPcIdx] -= (predictor[lastPcIdx] == 0) ? 0 : 1;
             }
         }
