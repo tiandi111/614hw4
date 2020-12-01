@@ -203,7 +203,7 @@ public:
             // two cases:
             //      1. the entry is empty
             //      2. the line is cache-averse
-            if (array[*ci] >= rpvMax) {
+            if (array[*ci] > rpvMax) {
                 break;
             }
         }
