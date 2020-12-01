@@ -200,10 +200,11 @@ public:
                 maxIdx = *ci;
                 leastTime = time[*ci];
             }
-            // two cases:
-            //      1. the entry is empty
-            //      2. the line is cache-averse
+            // if the entry is empty, stop here
             if (array[*ci] > rpvMax) {
+                maxRRIP = array[*ci];
+                maxIdx = *ci;
+                leastTime = time[*ci];
                 break;
             }
         }
